@@ -33,7 +33,11 @@ public:
 
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    float currentGain = 1.0f;
+    
+    // Variables del seguidor de envolvente
+    float envelope = 0.0f;
+    float currentGainDb = 0.0f;
+    double currentSampleRate = 44100.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessor)
 };
