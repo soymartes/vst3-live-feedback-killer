@@ -1,0 +1,27 @@
+name: Build macOS VST3
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Ninja
+      run: brew install ninja
+
+    - name: Configure CMake
+      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build VST3
+      run: cmake --build build --config Release
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: LiveGate-VST3-macOS
+        path: build/LiveGate_artefacts/Release/VST3/LiveGate.vst3
