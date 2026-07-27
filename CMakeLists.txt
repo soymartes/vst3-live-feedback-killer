@@ -30,4 +30,5 @@ target_compile_definitions(LiveGate PUBLIC
 target_link_libraries(LiveGate PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
+    juce::juce_audio_plugin_client
 )
