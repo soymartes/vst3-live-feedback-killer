@@ -55,7 +55,7 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto* channelData = buffer.getWritePointer(channel);
         for (int sample = 0; sample < numSamples; ++sample) {
-            currentGain = juce::jmap(0.05f, currentGain, targetGain); // Suavizado básico
+            currentGain = juce::jmap(0.05f, currentGain, targetGain);
             channelData[sample] *= currentGain;
         }
     }
@@ -67,6 +67,7 @@ juce::AudioProcessorEditor* LiveGateAudioProcessor::createEditor() { return new 
 void LiveGateAudioProcessor::getStateInformation(juce::MemoryBlock& destData) {}
 void LiveGateAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {}
 
-juce::AudioProcessor* JUCE_CALLTYPE createPluginProcessor() {
+// Corrección aplicada aquí:
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
     return new LiveGateAudioProcessor();
 }
