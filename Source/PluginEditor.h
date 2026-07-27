@@ -12,8 +12,16 @@ public:
 
 private:
     LiveGateAudioProcessor& audioProcessor;
+
     juce::Slider thresholdSlider;
+    juce::Slider attackSlider;
+    juce::Slider releaseSlider;
+    juce::Slider rangeSlider;
+
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rangeAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessorEditor)
 };
