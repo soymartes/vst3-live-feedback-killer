@@ -21,16 +21,12 @@ LiveGateAudioProcessorEditor::LiveGateAudioProcessorEditor(LiveGateAudioProcesso
     configureSliderAndLabel(releaseSlider, releaseLabel, "Release");
     configureSliderAndLabel(rangeSlider, rangeLabel, "Range");
 
-    fbButton.setButtonText("Feedback Killer");
-    addAndMakeVisible(fbButton);
-
     thresholdAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "threshold", thresholdSlider);
     attackAttachment    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "attack", attackSlider);
     releaseAttachment   = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "release", releaseSlider);
     rangeAttachment     = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "range", rangeSlider);
-    fbButtonAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.apvts, "fb_enable", fbButton);
 
-    setSize(400, 320);
+    setSize(400, 280);
 }
 
 LiveGateAudioProcessorEditor::~LiveGateAudioProcessorEditor() {}
@@ -39,24 +35,21 @@ void LiveGateAudioProcessorEditor::paint(juce::Graphics& g) {
     g.fillAll(juce::Colours::darkgrey);
     g.setColour(juce::Colours::white);
     g.setFont(14.0f);
-    g.drawFittedText("Live Gate + Feedback Notch", getLocalBounds().removeFromTop(35), juce::Justification::centred, 1);
+    g.drawFittedText("Live Gate - Base Estable", getLocalBounds().removeFromTop(35), juce::Justification::centred, 1);
 }
 
 void LiveGateAudioProcessorEditor::resized() {
     auto bounds = getLocalBounds().reduced(10);
     bounds.removeFromTop(35);
     
-    auto sliderArea = bounds.removeFromTop(190);
-    int sliderWidth = sliderArea.getWidth() / 4;
+    int sliderWidth = bounds.getWidth() / 4;
     
     auto layoutSliderWithMargin = [](juce::Rectangle<int> boundsRect) {
         return boundsRect.reduced(5, 18); 
     };
 
-    thresholdSlider.setBounds(layoutSliderWithMargin(sliderArea.removeFromLeft(sliderWidth)));
-    attackSlider.setBounds(layoutSliderWithMargin(sliderArea.removeFromLeft(sliderWidth)));
-    releaseSlider.setBounds(layoutSliderWithMargin(sliderArea.removeFromLeft(sliderWidth)));
-    rangeSlider.setBounds(layoutSliderWithMargin(sliderArea));
-
-    fbButton.setBounds(bounds.reduced(50, 5));
+    thresholdSlider.setBounds(layoutSliderWithMargin(bounds.removeFromLeft(sliderWidth)));
+    attackSlider.setBounds(layoutSliderWithMargin(bounds.removeFromLeft(sliderWidth)));
+    releaseSlider.setBounds(layoutSliderWithMargin(bounds.removeFromLeft(sliderWidth)));
+    rangeSlider.setBounds(layoutSliderWithMargin(bounds));
 }
