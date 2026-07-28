@@ -26,6 +26,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout LiveGateAudioProcessor::crea
     params.push_back(std::make_unique<juce::AudioParameterFloat>("attack", "Attack (ms)", 0.1f, 100.0f, 5.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("release", "Release (ms)", 10.0f, 1000.0f, 200.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("range", "Range (dB)", -60.0f, 0.0f, -40.0f));
+    params.push_back(std::make_unique<juce::AudioParameterBool>("fb_enable", "Feedback Killer", false));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("fb_freq", "Notch Freq", juce::NormalisableRange<float>(100.0f, 8000.0f, 1.0f, 0.4f), 1000.0f));
     return { params.begin(), params.end() };
 }
 
@@ -33,6 +35,14 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     currentSampleRate = sampleRate;
     envelope = 0.0f;
     currentGainDb = 0.0f;
+
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<uint32>(getTotalNumInputChannels());
+    
+    notchFilter.prepare(spec);
+    *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
 }
 
 void LiveGateAudioProcessor::releaseResources() {}
@@ -56,7 +66,18 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     float attackMs    = apvts.getRawParameterValue("attack")->load();
     float releaseMs   = apvts.getRawParameterValue("release")->load();
     float rangeDB     = apvts.getRawParameterValue("range")->load();
+    bool fbEnabled    = apvts.getRawParameterValue("fb_enable")->load() > 0.5f;
+    float fbFreq      = apvts.getRawParameterValue("fb_freq")->load();
 
+    // 1. Aplicar Filtro Notch si está activado
+    if (fbEnabled) {
+        *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, fbFreq);
+        juce::dsp::AudioBlock<float> block(buffer);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        notchFilter.process(context);
+    }
+
+    // 2. Procesar Noise Gate (envolvente por muestra)
     float attackCoeff  = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * attackMs * 0.001f));
     float releaseCoeff = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * releaseMs * 0.001f));
 
