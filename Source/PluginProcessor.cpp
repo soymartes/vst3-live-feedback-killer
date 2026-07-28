@@ -75,12 +75,9 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 
     auto numSamples = buffer.getNumSamples();
 
-    // Actualización dinámica del filtro notch si el cancelador está activo
     if (fbEnabled) {
-        // Coeficientes de prueba para un notch estrecho en una frecuencia fija por ahora (ej. 1 kHz)
-        // En la siguiente iteración afinaremos la detección automática de picos.
-        float qFactor = 30.0f; // Muesca muy angosta para preservar armónicos
-        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq, qFactor);
+        // Corrección aplicada: makeNotchFilter acepta 2 argumentos en esta versión
+        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
         
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
             notchFilters[channel % 2].coefficients = coeff;
@@ -90,14 +87,12 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto* channelData = buffer.getWritePointer(channel);
         
-        // Aplicar filtrado Notch por muestra si está habilitado
         if (fbEnabled) {
             for (int sample = 0; sample < numSamples; ++sample) {
                 channelData[sample] = notchFilters[channel % 2].processSample(channelData[sample]);
             }
         }
 
-        // Procesamiento del Gate (envolvente)
         for (int sample = 0; sample < numSamples; ++sample) {
             float sampleVal = std::abs(channelData[sample]);
             float inputDb = (sampleVal > 0.00001f) ? juce::Decibels::gainToDecibels(sampleVal) : -100.0f;
