@@ -33,4 +33,5 @@ target_link_libraries(LiveGate PRIVATE
     juce::juce_audio_plugin_client
 )
 
-target_compile_options(LiveGate PRIVATE -Wno-error)
+# Ignora la advertencia de memcpy de HarfBuzz y evita que las advertencias detengan el build
+target_compile_options(LiveGate PRIVATE -Wno-error -Wno-nontrivial-memcall)
