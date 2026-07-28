@@ -1,32 +1,49 @@
 #pragma once
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "PluginProcessor.h"
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
-class LiveGateAudioProcessorEditor : public juce::AudioProcessorEditor {
+class LiveGateAudioProcessor : public juce::AudioProcessor {
 public:
-    LiveGateAudioProcessorEditor(LiveGateAudioProcessor&);
-    ~LiveGateAudioProcessorEditor() override;
+    LiveGateAudioProcessor();
+    ~LiveGateAudioProcessor() override;
 
-    void paint(juce::Graphics&) override;
-    void resized() override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
+
+    const juce::String getName() const override;
+    bool acceptsMidi() const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
+    double getTailLengthSeconds() const override;
+
+    int getNumPrograms() override;
+    int getCurrentProgram() override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String& newName) override;
+
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+
+    juce::AudioProcessorValueTreeState apvts;
 
 private:
-    LiveGateAudioProcessor& audioProcessor;
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    
+    // Variables del seguidor de envolvente (Gate)
+    float envelope = 0.0f;
+    float currentGainDb = 0.0f;
+    double currentSampleRate = 44100.0;
 
-    juce::Slider thresholdSlider;
-    juce::Slider attackSlider;
-    juce::Slider releaseSlider;
-    juce::Slider rangeSlider;
+    // Filtros Notch para supresión de acoples (por canal, estéreo)
+    juce::dsp::IIR::Filter<float> notchFilters[2];
+    float detectedFeedbackFreq = 1000.0f;
+    bool feedbackActive = false;
 
-    juce::Label thresholdLabel;
-    juce::Label attackLabel;
-    juce::Label releaseLabel;
-    juce::Label rangeLabel;
-
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rangeAttachment;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessor)
 };
