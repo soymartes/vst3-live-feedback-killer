@@ -40,8 +40,8 @@ private:
     float currentGainDb = 0.0f;
     double currentSampleRate = 44100.0;
 
-    // Filtro Notch seguro para Supresión de Acoples
-    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> notchFilter;
+// Filtros IIR individuales por canal para el Notch
+    juce::dsp::IIR::Filter<float> notchFilters[2];
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessor)
 };
