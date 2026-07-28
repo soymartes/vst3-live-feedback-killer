@@ -33,5 +33,4 @@ target_link_libraries(LiveGate PRIVATE
     juce::juce_audio_plugin_client
 )
 
-# Evita que las advertencias internas de Xcode detengan la compilación
 target_compile_options(LiveGate PRIVATE -Wno-error -Wno-nontrivial-memcall)
