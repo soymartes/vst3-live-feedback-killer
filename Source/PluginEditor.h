@@ -18,6 +18,11 @@ private:
     juce::Slider releaseSlider;
     juce::Slider rangeSlider;
 
+    juce::Label thresholdLabel;
+    juce::Label attackLabel;
+    juce::Label releaseLabel;
+    juce::Label rangeLabel;
+
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
