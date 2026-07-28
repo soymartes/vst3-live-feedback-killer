@@ -32,3 +32,6 @@ target_link_libraries(LiveGate PRIVATE
     juce::juce_dsp
     juce::juce_audio_plugin_client
 )
+
+# Evita que las advertencias del sistema detengan la compilación
+target_compile_options(LiveGate PRIVATE -Wno-error)
