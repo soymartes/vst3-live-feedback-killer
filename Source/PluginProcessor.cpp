@@ -75,8 +75,8 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     auto numSamples = buffer.getNumSamples();
 
     if (fbEnabled) {
-        typename juce::dsp::IIR::Coefficients<float>::Ptr coeff = 
-            juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
+        // Uso de auto para deducción correcta del tipo de puntero inteligente
+        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
         
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
             notchFilters[channel % 2].coefficients = coeff;
