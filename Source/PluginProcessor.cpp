@@ -39,12 +39,12 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<uint32>(samplesPerBlock);
-    spec.numChannels = static_cast<uint32>(getTotalNumInputChannels());
-    
-    notchFilter.prepare(spec);
-    
-    // Asignación limpia utilizando makeNotchFilter correctamente
-    *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
+    spec.numChannels = 1;
+
+    for (int i = 0; i < 2; ++i) {
+        notchFilters[i].prepare(spec);
+        notchFilters[i].coefficients = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
+    }
 }
 
 void LiveGateAudioProcessor::releaseResources() {}
@@ -71,15 +71,14 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     bool fbEnabled    = apvts.getRawParameterValue("fb_enable")->load() > 0.5f;
     float fbFreq      = apvts.getRawParameterValue("fb_freq")->load();
 
-    // 1. Aplicar Filtro Notch si está activado (actualización segura de coeficientes)
+    // Actualizar coeficientes del notch si está activo
     if (fbEnabled) {
-        *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, fbFreq);
-        juce::dsp::AudioBlock<float> block(buffer);
-        juce::dsp::ProcessContextReplacing<float> context(block);
-        notchFilter.process(context);
+        auto newCoeffs = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, fbFreq);
+        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+            notchFilters[channel % 2].coefficients = newCoeffs;
+        }
     }
 
-    // 2. Procesar Noise Gate (envolvente por muestra)
     float attackCoeff  = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * attackMs * 0.001f));
     float releaseCoeff = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * releaseMs * 0.001f));
 
@@ -88,7 +87,14 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     for (int sample = 0; sample < numSamples; ++sample) {
         float inputSample = 0.0f;
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-            inputSample = std::max(inputSample, std::abs(buffer.getReadPointer(channel)[sample]));
+            float* channelData = buffer.getWritePointer(channel);
+            
+            // Aplicar filtro notch muestra por muestra si está habilitado
+            if (fbEnabled) {
+                channelData[sample] = notchFilters[channel % 2].processSample(channelData[sample]);
+            }
+
+            inputSample = std::max(inputSample, std::abs(channelData[sample]));
         }
 
         float inputDb = (inputSample > 0.00001f) ? juce::Decibels::gainToDecibels(inputSample) : -100.0f;
