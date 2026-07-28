@@ -75,9 +75,10 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     auto numSamples = buffer.getNumSamples();
 
     if (fbEnabled) {
+        // Actualización in-place libre de asignaciones de memoria en el hilo de audio
         auto newCoeffs = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-            notchFilters[channel % 2].coefficients = newCoeffs;
+            *notchFilters[channel % 2].coefficients = *newCoeffs;
         }
     }
 
