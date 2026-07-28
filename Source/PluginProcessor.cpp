@@ -42,6 +42,8 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     spec.numChannels = static_cast<uint32>(getTotalNumInputChannels());
     
     notchFilter.prepare(spec);
+    
+    // Asignación limpia utilizando makeNotchFilter correctamente
     *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
 }
 
@@ -69,7 +71,7 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     bool fbEnabled    = apvts.getRawParameterValue("fb_enable")->load() > 0.5f;
     float fbFreq      = apvts.getRawParameterValue("fb_freq")->load();
 
-    // 1. Aplicar Filtro Notch si está activado
+    // 1. Aplicar Filtro Notch si está activado (actualización segura de coeficientes)
     if (fbEnabled) {
         *notchFilter.state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, fbFreq);
         juce::dsp::AudioBlock<float> block(buffer);
