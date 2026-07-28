@@ -26,6 +26,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LiveGateAudioProcessor::crea
     params.push_back(std::make_unique<juce::AudioParameterFloat>("attack", "Attack (ms)", 0.1f, 100.0f, 5.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("release", "Release (ms)", 10.0f, 1000.0f, 200.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("range", "Range (dB)", -60.0f, 0.0f, -40.0f));
+    params.push_back(std::make_unique<juce::AudioParameterBool>("fb_enable", "Feedback Killer", true));
     return { params.begin(), params.end() };
 }
 
@@ -33,6 +34,17 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     currentSampleRate = sampleRate;
     envelope = 0.0f;
     currentGainDb = 0.0f;
+
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<uint32>(samplesPerBlock);
+    spec.numChannels = 1;
+
+    for (int i = 0; i < 2; ++i) {
+        notchFilters[i].prepare(spec);
+        // Inicializar con un filtro neutro (sin muesca activa)
+        *notchFilters[i].state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f, 10.0f);
+    }
 }
 
 void LiveGateAudioProcessor::releaseResources() {}
@@ -49,52 +61,64 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+    for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
     float thresholdDB = apvts.getRawParameterValue("threshold")->load();
     float attackMs    = apvts.getRawParameterValue("attack")->load();
     float releaseMs   = apvts.getRawParameterValue("release")->load();
     float rangeDB     = apvts.getRawParameterValue("range")->load();
+    bool fbEnabled    = apvts.getRawParameterValue("fb_enable")->load() > 0.5f;
 
-    // Coeficientes de suavizado para ataque y liberación (1 polo)
     float attackCoeff  = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * attackMs * 0.001f));
     float releaseCoeff = std::exp(-1.0f / (static_cast<float>(currentSampleRate) * releaseMs * 0.001f));
 
     auto numSamples = buffer.getNumSamples();
 
-    for (int sample = 0; sample < numSamples; ++sample) {
-        // Obtener el valor máximo absoluto entre los canales (mono/estéreo link básico)
-        float inputSample = 0.0f;
-        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-            inputSample = std::max(inputSample, std::abs(buffer.getReadPointer(channel)[sample]));
-        }
-
-        // Seguidor de envolvente con tiempos independientes
-        float inputDb = (inputSample > 0.00001f) ? juce::Decibels::gainToDecibels(inputSample) : -100.0f;
+    // Actualización dinámica del filtro notch si el cancelador está activo
+    if (fbEnabled) {
+        // Coeficientes de prueba para un notch estrecho en una frecuencia fija por ahora (ej. 1 kHz)
+        // En la siguiente iteración afinaremos la detección automática de picos.
+        float qFactor = 30.0f; // Muesca muy angosta para preservar armónicos
+        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq, qFactor);
         
-        if (inputDb > envelope)
-            envelope = attackCoeff * envelope + (1.0f - attackCoeff) * inputDb;
-        else
-            envelope = releaseCoeff * envelope + (1.0f - releaseCoeff) * inputDb;
+        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+            notchFilters[channel % 2].coefficients = coeff;
+        }
+    }
 
-        // Lógica de ganancia del Gate
-        float targetGainDb = 0.0f;
-        if (envelope < thresholdDB) {
-            // Aplicar atenuación gradual basada en el Range configurado
-            float diff = thresholdDB - envelope;
-            targetGainDb = -diff; // Atenuación proporcional
-            if (targetGainDb < rangeDB)
-                targetGainDb = rangeDB;
+    for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+        auto* channelData = buffer.getWritePointer(channel);
+        
+        // Aplicar filtrado Notch por muestra si está habilitado
+        if (fbEnabled) {
+            for (int sample = 0; sample < numSamples; ++sample) {
+                channelData[sample] = notchFilters[channel % 2].processSample(channelData[sample]);
+            }
         }
 
-        // Suavizado de la ganancia resultante para evitar clics
-        currentGainDb = 0.99f * currentGainDb + 0.01f * targetGainDb;
-        float linearGain = juce::Decibels::decibelsToGain(currentGainDb);
+        // Procesamiento del Gate (envolvente)
+        for (int sample = 0; sample < numSamples; ++sample) {
+            float sampleVal = std::abs(channelData[sample]);
+            float inputDb = (sampleVal > 0.00001f) ? juce::Decibels::gainToDecibels(sampleVal) : -100.0f;
+            
+            if (inputDb > envelope)
+                envelope = attackCoeff * envelope + (1.0f - attackCoeff) * inputDb;
+            else
+                envelope = releaseCoeff * envelope + (1.0f - releaseCoeff) * inputDb;
 
-        // Aplicar ganancia a las muestras
-        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-            buffer.getWritePointer(channel)[sample] *= linearGain;
+            float targetGainDb = 0.0f;
+            if (envelope < thresholdDB) {
+                float diff = thresholdDB - envelope;
+                targetGainDb = -diff;
+                if (targetGainDb < rangeDB)
+                    targetGainDb = rangeDB;
+            }
+
+            currentGainDb = 0.99f * currentGainDb + 0.01f * targetGainDb;
+            float linearGain = juce::Decibels::decibelsToGain(currentGainDb);
+
+            channelData[sample] *= linearGain;
         }
     }
 }
