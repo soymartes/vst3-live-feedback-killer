@@ -1,49 +1,34 @@
 #pragma once
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_dsp/juce_dsp.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "PluginProcessor.h"
 
-class LiveGateAudioProcessor : public juce::AudioProcessor {
+class LiveGateAudioProcessorEditor : public juce::AudioProcessorEditor {
 public:
-    LiveGateAudioProcessor();
-    ~LiveGateAudioProcessor() override;
+    LiveGateAudioProcessorEditor(LiveGateAudioProcessor&);
+    ~LiveGateAudioProcessorEditor() override;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
-    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-
-    juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
-
-    const juce::String getName() const override;
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
-
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
-    void setCurrentProgram(int index) override;
-    const juce::String getProgramName(int index) override;
-    void changeProgramName(int index, const juce::String& newName) override;
-
-    void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
-
-    juce::AudioProcessorValueTreeState apvts;
+    void paint(juce::Graphics&) override;
+    void resized() override;
 
 private:
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    
-    // Variables del seguidor de envolvente (Gate)
-    float envelope = 0.0f;
-    float currentGainDb = 0.0f;
-    double currentSampleRate = 44100.0;
+    LiveGateAudioProcessor& audioProcessor;
 
-    // Filtros Notch para supresión de acoples (por canal, estéreo)
-    juce::dsp::IIR::Filter<float> notchFilters[2];
-    float detectedFeedbackFreq = 1000.0f;
-    bool feedbackActive = false;
+    juce::Slider thresholdSlider;
+    juce::Slider attackSlider;
+    juce::Slider releaseSlider;
+    juce::Slider rangeSlider;
+    juce::ToggleButton fbButton;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessor)
+    juce::Label thresholdLabel;
+    juce::Label attackLabel;
+    juce::Label releaseLabel;
+    juce::Label rangeLabel;
+
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rangeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> fbButtonAttachment;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessorEditor)
 };
