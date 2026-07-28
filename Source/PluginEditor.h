@@ -17,16 +17,21 @@ private:
     juce::Slider attackSlider;
     juce::Slider releaseSlider;
     juce::Slider rangeSlider;
+    juce::Slider notchFreqSlider;
+    juce::ToggleButton fbButton;
 
     juce::Label thresholdLabel;
     juce::Label attackLabel;
     juce::Label releaseLabel;
     juce::Label rangeLabel;
+    juce::Label notchFreqLabel;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> thresholdAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rangeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> notchFreqAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> fbButtonAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessorEditor)
 };
