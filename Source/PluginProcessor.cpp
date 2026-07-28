@@ -42,8 +42,7 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 
     for (int i = 0; i < 2; ++i) {
         notchFilters[i].prepare(spec);
-        // Inicializar con un filtro neutro (sin muesca activa)
-        *notchFilters[i].state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f, 10.0f);
+        notchFilters[i].coefficients = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
     }
 }
 
@@ -76,8 +75,8 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     auto numSamples = buffer.getNumSamples();
 
     if (fbEnabled) {
-        // Corrección aplicada: makeNotchFilter acepta 2 argumentos en esta versión
-        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
+        typename juce::dsp::IIR::Coefficients<float>::Ptr coeff = 
+            juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
         
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
             notchFilters[channel % 2].coefficients = coeff;
