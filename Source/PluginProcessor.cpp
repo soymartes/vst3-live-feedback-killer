@@ -42,7 +42,7 @@ void LiveGateAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 
     for (int i = 0; i < 2; ++i) {
         notchFilters[i].prepare(spec);
-        notchFilters[i].coefficients = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
+        *notchFilters[i].state = *juce::dsp::IIR::Coefficients<float>::makeNotchFilter(sampleRate, 1000.0f);
     }
 }
 
@@ -75,11 +75,10 @@ void LiveGateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     auto numSamples = buffer.getNumSamples();
 
     if (fbEnabled) {
-        // Uso de auto para deducción correcta del tipo de puntero inteligente
-        auto coeff = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
-        
+        // Actualización directa del estado interno del filtro IIR sin conflictos de punteros
+        auto newCoeffs = juce::dsp::IIR::Coefficients<float>::makeNotchFilter(currentSampleRate, detectedFeedbackFreq);
         for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-            notchFilters[channel % 2].coefficients = coeff;
+            *notchFilters[channel % 2].state = *newCoeffs;
         }
     }
 
