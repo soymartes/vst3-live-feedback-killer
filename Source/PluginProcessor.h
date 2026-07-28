@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
 class LiveGateAudioProcessor : public juce::AudioProcessor {
 public:
@@ -34,10 +35,15 @@ public:
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     
-    // Variables del seguidor de envolvente
+    // Variables del seguidor de envolvente (Gate)
     float envelope = 0.0f;
     float currentGainDb = 0.0f;
     double currentSampleRate = 44100.0;
+
+    // Filtros Notch para supresión de acoples (por canal, estéreo)
+    juce::dsp::IIR::Filter<float> notchFilters[2];
+    float detectedFeedbackFreq = 1000.0f;
+    bool feedbackActive = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveGateAudioProcessor)
 };
